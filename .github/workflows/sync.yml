@@ -1,0 +1,41 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # This runs the action every day at midnight
+  workflow_dispatch: # Allows the workflow to be triggered manually
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false # We disable the automatic token handling
+          fetch-depth: 0 # We need to fetch the full history to sync properly
+
+      - name: Setup Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Add Upstream remote
+        run: git remote add upstream https://github.com/cmliu/edgetunnel.git
+        # Replace ORIGINAL_OWNER and REPO_NAME with the repository's details
+
+      - name: Fetch Upstream
+        run: git fetch upstream
+
+      - name: Merge Upstream branch
+        run: |
+          git merge upstream/main --allow-unrelated-histories || true
+          git checkout --theirs worker.zip
+          git add worker.zip
+          git commit -m "Resolved merge conflict by taking upstream version of worker.zip"
+
+      - name: Push changes
+        run: |
+          git push https://$GITHUB_ACTOR:${{ secrets.PAT }}@github.com/$GITHUB_REPOSITORY.git HEAD:main
+        # Use the appropriate branch name for your forked repository
